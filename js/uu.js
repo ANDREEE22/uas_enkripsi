@@ -1,5 +1,3 @@
-// perangkat 2      
-
 // Menu toggle functionality
 const menuBtn = document.getElementById('menuBtn');
 const dropdownMenu = document.getElementById('dropdownMenu');
@@ -16,7 +14,6 @@ menuBackdrop.addEventListener('click', function() {
     menuBackdrop.classList.remove('show');
 });
         
-// Close menu when clicking outside
 document.addEventListener('click', function(e) {
     if (!dropdownMenu.contains(e.target) && e.target !== menuBtn) {
         dropdownMenu.classList.remove('show');
@@ -24,7 +21,7 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Password protection for viewing decrypted messages
+// Password protection
 const passwordModal = document.getElementById('passwordModal');
 const passwordInput = document.getElementById('passwordInput');
 const submitPassword = document.getElementById('submitPassword');
@@ -39,7 +36,6 @@ document.getElementById('viewDecrypted').addEventListener('click', function(e) {
     menuBackdrop.classList.remove('show');
     
     if (!showDecrypted && !passwordVerified) {
-        // Show password modal if trying to view decrypted for the first time
         passwordModal.classList.add('show');
         passwordInput.value = '';
         passwordInput.focus();
@@ -76,47 +72,29 @@ function toggleDecryptedMessages() {
     const viewBtn = document.getElementById('viewDecrypted');
     viewBtn.textContent = showDecrypted ? 'Lihat Pesan Terenkripsi' : 'Lihat Pesan Asli';
     
-    const shiftValue = parseInt(document.getElementById('shiftValue').value);
-    const messages = document.querySelectorAll('.message[data-original]');
+    const messages = document.querySelectorAll('.message');
     
     messages.forEach(message => {
         const originalText = message.getAttribute('data-original');
+        const currentText = message.querySelector('div:first-child').textContent;
         const messageDiv = message.querySelector('div:first-child');
         
         if (showDecrypted) {
-            // Tampilkan pesan terdekripsi
-            const decryptedText = decryptText(originalText, shiftValue);
-            messageDiv.textContent = decryptedText;
+            // Jika originalText ada, gunakan itu, jika tidak gunakan currentText
+            messageDiv.textContent = originalText || currentText;
         } else {
-            // Kembalikan ke pesan asli (terenkripsi)
-            messageDiv.textContent = originalText;
-            // Reset verifikasi password setiap kali kembali ke pesan terenkripsi
+            // Kembalikan ke teks yang ada di database (terenkripsi untuk received)
+            if (message.classList.contains('received')) {
+                const encryptedText = message.getAttribute('data-encrypted') || currentText;
+                messageDiv.textContent = encryptedText;
+            } else {
+                messageDiv.textContent = currentText;
+            }
             passwordVerified = false;
         }
     });
 }
 
-// Fungsi untuk dekripsi teks
-function decryptText(text, shift) {
-    let result = '';
-    shift = shift % 95;
-    
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const code = char.charCodeAt(0);
-        
-        if (code >= 32 && code <= 126) {
-            const newCode = 32 + (code - 32 - shift + 95) % 95;
-            result += String.fromCharCode(newCode);
-        } else {
-            result += char;
-        }
-    }
-    
-    return result;
-}
-
-// Fungsi untuk mengirim pesan dengan AJAX
 document.getElementById('messageForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -125,7 +103,6 @@ document.getElementById('messageForm').addEventListener('submit', function(e) {
     
     if (messageInput.value.trim() === '') return;
     
-    // Kirim data ke server
     fetch('api.php?action=send', {
         method: 'POST',
         headers: {
@@ -136,15 +113,13 @@ document.getElementById('messageForm').addEventListener('submit', function(e) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Tambahkan pesan ke chat container
-            addMessageToChat(data.message, 'sent');
+            addMessageToChat(data.message, 'sent', data.original);
             messageInput.value = '';
         }
     });
 });
         
-// Fungsi untuk menambahkan pesan ke tampilan
-function addMessageToChat(message, type) {
+function addMessageToChat(message, type, original) {
     const chatContainer = document.getElementById('chatContainer');
     const now = new Date();
     const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
@@ -152,7 +127,10 @@ function addMessageToChat(message, type) {
     
     const messageElement = document.createElement('div');
     messageElement.className = `message ${type}`;
-    messageElement.setAttribute('data-original', message);
+    messageElement.setAttribute('data-original', original || message);
+    if (type === 'received') {
+        messageElement.setAttribute('data-encrypted', message);
+    }
     messageElement.innerHTML = `
         <div>${message}</div>
         <div class="time">${timeString}</div>
@@ -162,7 +140,6 @@ function addMessageToChat(message, type) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
         
-// Fungsi untuk memeriksa pesan baru
 function checkForNewMessages() {
     fetch('api.php?action=get&device=2')
         .then(response => response.json())
@@ -173,13 +150,15 @@ function checkForNewMessages() {
                 const lastId = existingMessages.length > 0 ? 
                     parseInt(existingMessages[existingMessages.length - 1].getAttribute('data-id')) : -1;
                 
-                // Tambahkan hanya pesan baru
                 data.messages.forEach((message, index) => {
-                    if (index > lastId && message.type === 'received') {
+                    if (index > lastId) {
                         const messageElement = document.createElement('div');
                         messageElement.className = `message ${message.type}`;
                         messageElement.setAttribute('data-id', index);
-                        messageElement.setAttribute('data-original', message.text);
+                        messageElement.setAttribute('data-original', message.original);
+                        if (message.type === 'received') {
+                            messageElement.setAttribute('data-encrypted', message.text);
+                        }
                         messageElement.innerHTML = `
                             <div>${message.text}</div>
                             <div class="time">${message.time}</div>
@@ -193,7 +172,6 @@ function checkForNewMessages() {
         });
 }
         
-// Fungsi untuk menghapus riwayat chat
 document.getElementById('clearChat').addEventListener('click', function(e) {
     e.preventDefault();
     dropdownMenu.classList.remove('show');
@@ -213,10 +191,8 @@ document.getElementById('clearChat').addEventListener('click', function(e) {
     }
 });
         
-// Periksa pesan baru setiap 1 detik
 setInterval(checkForNewMessages, 1000);
         
-// Auto scroll ke bawah saat pertama kali load
 window.onload = function() {
     document.getElementById('chatContainer').scrollTop = 
         document.getElementById('chatContainer').scrollHeight;

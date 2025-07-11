@@ -1,9 +1,5 @@
 <?php
 session_start();
-if (!isset($_SESSION['perangkat2'])) {
-    $_SESSION['perangkat1'] = [];
-    $_SESSION['perangkat2'] = [];
-}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -12,11 +8,9 @@ if (!isset($_SESSION['perangkat2'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perangkat 2 - Dekripsi Realtime</title>
     <link rel="stylesheet" href="css/style.css">
-    
 </head>
 
 <body>
-    
     <div class="header">
          <img src="img/oyenn.jpg" alt="Circular diagram" width="50px" height="50px" style="border-radius: 50%; object-fit: cover;">
         <h2>KUCING OREN</h2>
@@ -40,16 +34,7 @@ if (!isset($_SESSION['perangkat2'])) {
     </div>
     
     <div class="chat-container" id="chatContainer">
-        <?php
-        if (!empty($_SESSION['perangkat2'])) {
-            foreach ($_SESSION['perangkat2'] as $index => $message) {
-                echo '<div class="message '.$message['type'].'" data-id="'.$index.'" data-original="'.htmlspecialchars($message['text']).'">';
-                echo '<div>'.$message['text'].'</div>';
-                echo '<div class="time">'.$message['time'].'</div>';
-                echo '</div>';
-            }
-        }
-        ?>
+        <!-- Messages will be loaded via JavaScript -->
     </div>
     
     <form id="messageForm" class="input-area">

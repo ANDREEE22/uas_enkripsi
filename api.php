@@ -1,150 +1,160 @@
 <?php
-// Tambahkan error reporting di awal
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// Mulai session dengan pengaturan yang lebih kompatibel
-session_start([
-    'cookie_lifetime' => 86400,
-    'read_and_close'  => false,
-    'use_strict_mode' => true
-]);
 header('Content-Type: application/json');
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST");
 header("Access-Control-Allow-Headers: Content-Type");
 
-// Inisialisasi session jika belum ada
-if (!isset($_SESSION['perangkat1'])) {
-    $_SESSION['perangkat1'] = [];
-    $_SESSION['perangkat2'] = [];
+// Database configuration
+$dbHost = 'localhost';
+$dbName = 'chat_app';
+$dbUser = 'root';
+$dbPass = '';
+
+try {
+    $db = new PDO("mysql:host=$dbHost;dbname=$dbName;charset=utf8", $dbUser, $dbPass);
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    echo json_encode(['error' => 'Database connection failed: ' . $e->getMessage()]);
+    exit;
 }
 
 $action = $_GET['action'] ?? '';
 
 switch ($action) {
     case 'send':
-        handleSendMessage();
+        handleSendMessage($db);
         break;
     case 'get':
-        handleGetMessages();
+        handleGetMessages($db);
         break;
     case 'clear':
-        handleClearChat();
+        handleClearChat($db);
         break;
     default:
-        echo json_encode(['error' => 'Aksi tidak valid']);
+        echo json_encode(['error' => 'Invalid action']);
 }
 
-function handleSendMessage() {
+function handleSendMessage($db) {
     $device = $_POST['device'] ?? '';
     $text = $_POST['text'] ?? '';
     $shift = isset($_POST['shift']) ? (int)$_POST['shift'] : 3;
     
     if (empty($text)) {
-        echo json_encode(['error' => 'Pesan tidak boleh kosong']);
+        echo json_encode(['error' => 'Message cannot be empty']);
         return;
     }
     
-    $result = '';
-    $shift = $shift % 95;
     $time = date('H:i');
     
     if ($device === '1') {
-        // Enkripsi dari perangkat 1
-        for ($i = 0; $i < strlen($text); $i++) {
-            $char = $text[$i];
-            $code = ord($char);
-            
-            if ($code >= 32 && $code <= 126) {
-                $newCode = 32 + ($code - 32 + $shift) % 95;
-                $result .= chr($newCode);
-            } else {
-                $result .= $char;
-            }
-        }
+        $encryptedText = encryptText($text, $shift);
         
-        $_SESSION['perangkat1'][] = [
-            'type' => 'sent',
-            'text' => $text,
-            'time' => $time
-        ];
-        
-        $_SESSION['perangkat2'][] = [
-            'type' => 'received',
-            'text' => $result,
-            'time' => $time
-        ];
+        saveMessage($db, '1', 'sent', $text, $text, $shift, $time);
+        saveMessage($db, '2', 'received', $encryptedText, $text, $shift, $time);
         
         echo json_encode([
             'success' => true,
-            'message' => $text
+            'message' => $text,
+            'original' => $text
         ]);
     } 
     elseif ($device === '2') {
-        // Dekripsi dari perangkat 2
-        for ($i = 0; $i < strlen($text); $i++) {
-            $char = $text[$i];
-            $code = ord($char);
-            
-            if ($code >= 32 && $code <= 126) {
-                $newCode = 32 + ($code - 32 - $shift + 95) % 95;
-                $result .= chr($newCode);
-            } else {
-                $result .= $char;
-            }
-        }
+        $decryptedText = decryptText($text, $shift);
         
-        $_SESSION['perangkat2'][] = [
-            'type' => 'sent',
-            'text' => $text,
-            'time' => $time
-        ];
-        
-        $_SESSION['perangkat1'][] = [
-            'type' => 'received',
-            'text' => $result,
-            'time' => $time
-        ];
+        saveMessage($db, '2', 'sent', $text, $decryptedText, $shift, $time);
+        saveMessage($db, '1', 'received', $decryptedText, $decryptedText, $shift, $time);
         
         echo json_encode([
             'success' => true,
-            'message' => $text
+            'message' => $text,
+            'original' => $decryptedText
         ]);
     }
     else {
-        echo json_encode(['error' => 'Perangkat tidak valid']);
+        echo json_encode(['error' => 'Invalid device']);
     }
 }
 
-function handleGetMessages() {
+function handleGetMessages($db) {
     $device = $_GET['device'] ?? '';
     
-    if ($device === '1') {
-        echo json_encode([
-            'messages' => $_SESSION['perangkat1'] ?? []
-        ]);
-    } 
-    elseif ($device === '2') {
-        echo json_encode([
-            'messages' => $_SESSION['perangkat2'] ?? []
-        ]);
-    }
-    else {
-        echo json_encode(['error' => 'Perangkat tidak valid']);
+    try {
+        $stmt = $db->prepare("SELECT * FROM messages WHERE device_id = ? ORDER BY created_at");
+        $stmt->execute([$device]);
+        $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $formattedMessages = [];
+        foreach ($messages as $msg) {
+            $formattedMessages[] = [
+                'type' => $msg['message_type'],
+                'text' => $msg['content'],
+                'original' => $msg['original_content'],
+                'time' => date('H:i', strtotime($msg['created_at']))
+            ];
+        }
+        
+        echo json_encode(['messages' => $formattedMessages]);
+    } catch (PDOException $e) {
+        echo json_encode(['error' => 'Failed to get messages: ' . $e->getMessage()]);
     }
 }
 
-function handleClearChat() {
+function handleClearChat($db) {
     $device = $_GET['device'] ?? '';
     
-    if ($device === '1') {
-        $_SESSION['perangkat1'] = [];
-    } 
-    elseif ($device === '2') {
-        $_SESSION['perangkat2'] = [];
+    try {
+        $stmt = $db->prepare("DELETE FROM messages WHERE device_id = ?");
+        $stmt->execute([$device]);
+        echo json_encode(['success' => true]);
+    } catch (PDOException $e) {
+        echo json_encode(['error' => 'Failed to clear chat: ' . $e->getMessage()]);
+    }
+}
+
+function saveMessage($db, $deviceId, $type, $content, $originalContent, $shift, $time) {
+    try {
+        $stmt = $db->prepare("INSERT INTO messages (device_id, message_type, content, original_content, shift_value) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$deviceId, $type, $content, $originalContent, $shift]);
+    } catch (PDOException $e) {
+        error_log('Failed to save message: ' . $e->getMessage());
+    }
+}
+
+function encryptText($text, $shift) {
+    $result = '';
+    $shift = $shift % 95;
+    
+    for ($i = 0; $i < strlen($text); $i++) {
+        $char = $text[$i];
+        $code = ord($char);
+        
+        if ($code >= 32 && $code <= 126) {
+            $newCode = 32 + ($code - 32 + $shift) % 95;
+            $result .= chr($newCode);
+        } else {
+            $result .= $char;
+        }
     }
     
-    echo json_encode(['success' => true]);
+    return $result;
+}
+
+function decryptText($text, $shift) {
+    $result = '';
+    $shift = $shift % 95;
+    
+    for ($i = 0; $i < strlen($text); $i++) {
+        $char = $text[$i];
+        $code = ord($char);
+        
+        if ($code >= 32 && $code <= 126) {
+            $newCode = 32 + ($code - 32 - $shift + 95) % 95;
+            $result .= chr($newCode);
+        } else {
+            $result .= $char;
+        }
+    }
+    
+    return $result;
 }
 ?>
