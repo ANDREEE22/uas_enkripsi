@@ -1,12 +1,5 @@
 <?php
 session_start();
-
-// Password protection
-if (!isset($_SESSION['logged_in'])) {
-    header('Location: password.php?device=1');
-    exit();
-}
-
 if (!isset($_SESSION['perangkat1'])) {
     $_SESSION['perangkat1'] = [];
     $_SESSION['perangkat2'] = [];
@@ -19,12 +12,7 @@ if (!isset($_SESSION['perangkat1'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perangkat 1 - Enkripsi Realtime</title>
     <link rel="stylesheet" href="css/style.css">
-    <script>
-        // Clear session when leaving the page
-        window.addEventListener('beforeunload', function() {
-            fetch('logout.php');
-        });
-    </script>
+    
 </head>
 
 <body>
@@ -44,7 +32,6 @@ if (!isset($_SESSION['perangkat1'])) {
                     <input type="number" id="shiftValue" min="1" max="94" value="3">
                 </div>
                 <div class="dropdown-item clear-btn" id="clearChat">Hapus Riwayat</div>
-                <div class="dropdown-item" id="logoutBtn">Keluar</div>
             </div>
         </div>
         <div class="menu-backdrop" id="menuBackdrop"></div>
@@ -73,15 +60,6 @@ if (!isset($_SESSION['perangkat1'])) {
         </button>
     </form>
 
-   <script src="js/hh.js"></script>
-   <script>
-       // Add logout functionality
-       document.getElementById('logoutBtn')?.addEventListener('click', function() {
-           fetch('logout.php')
-               .then(() => {
-                   window.location.href = 'index.php';
-               });
-       });
-   </script>
+   <script src="js/hh.js"></script> 
 </body>
 </html>

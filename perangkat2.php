@@ -1,12 +1,5 @@
 <?php
 session_start();
-
-// Password protection
-if (!isset($_SESSION['logged_in'])) {
-    header('Location: password.php?device=2');
-    exit();
-}
-
 if (!isset($_SESSION['perangkat2'])) {
     $_SESSION['perangkat1'] = [];
     $_SESSION['perangkat2'] = [];
@@ -19,15 +12,11 @@ if (!isset($_SESSION['perangkat2'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perangkat 2 - Dekripsi Realtime</title>
     <link rel="stylesheet" href="css/style.css">
-    <script>
-        // Clear session when leaving the page
-        window.addEventListener('beforeunload', function() {
-            fetch('logout.php');
-        });
-    </script>
+    
 </head>
 
 <body>
+    
     <div class="header">
          <img src="img/oyenn.jpg" alt="Circular diagram" width="50px" height="50px" style="border-radius: 50%; object-fit: cover;">
         <h2>KUCING OREN</h2>
@@ -45,7 +34,6 @@ if (!isset($_SESSION['perangkat2'])) {
                 </div>
                 <div class="dropdown-item view-decrypted-btn" id="viewDecrypted">Lihat Pesan Asli</div>
                 <div class="dropdown-item clear-btn" id="clearChat">Hapus Riwayat</div>
-                <div class="dropdown-item" id="logoutBtn">Keluar</div>
             </div>
         </div>
         <div class="menu-backdrop" id="menuBackdrop"></div>
@@ -74,15 +62,17 @@ if (!isset($_SESSION['perangkat2'])) {
         </button>
     </form>
 
+    <!-- Password Modal -->
+    <div class="password-modal" id="passwordModal">
+        <div class="password-box">
+            <h3>Masukkan Sandi</h3>
+            <p>Sandi: "INDONESIA" (huruf kapital)</p>
+            <input type="password" id="passwordInput" placeholder="Masukkan sandi">
+            <button id="submitPassword">Submit</button>
+            <button class="cancel" id="cancelPassword">Batal</button>
+        </div>
+    </div>
+
     <script src="js/uu.js"></script>
-    <script>
-        // Add logout functionality
-        document.getElementById('logoutBtn')?.addEventListener('click', function() {
-            fetch('logout.php')
-                .then(() => {
-                    window.location.href = 'index.php';
-                });
-        });
-    </script>
 </body>
 </html>

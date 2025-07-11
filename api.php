@@ -16,9 +16,6 @@ switch ($action) {
     case 'get':
         handleGetMessages();
         break;
-    case 'clear':
-        handleClearChat();
-        break;
     default:
         echo json_encode(['error' => 'Aksi tidak valid']);
 }
@@ -27,7 +24,6 @@ function handleSendMessage() {
     $device = $_POST['device'] ?? '';
     $text = $_POST['text'] ?? '';
     $shift = isset($_POST['shift']) ? (int)$_POST['shift'] : 3;
-    $mode = $_POST['mode'] ?? 'enkripsi';
     
     if (empty($text)) {
         echo json_encode(['error' => 'Pesan tidak boleh kosong']);
@@ -55,15 +51,13 @@ function handleSendMessage() {
         $_SESSION['perangkat1'][] = [
             'type' => 'sent',
             'text' => $text,
-            'time' => $time,
-            'mode' => $mode
+            'time' => $time
         ];
         
         $_SESSION['perangkat2'][] = [
             'type' => 'received',
             'text' => $result,
-            'time' => $time,
-            'mode' => $mode
+            'time' => $time
         ];
         
         echo json_encode([
@@ -88,15 +82,13 @@ function handleSendMessage() {
         $_SESSION['perangkat2'][] = [
             'type' => 'sent',
             'text' => $text,
-            'time' => $time,
-            'mode' => $mode
+            'time' => $time
         ];
         
         $_SESSION['perangkat1'][] = [
             'type' => 'received',
             'text' => $result,
-            'time' => $time,
-            'mode' => $mode
+            'time' => $time
         ];
         
         echo json_encode([
@@ -121,22 +113,6 @@ function handleGetMessages() {
         echo json_encode([
             'messages' => $_SESSION['perangkat2'] ?? []
         ]);
-    }
-    else {
-        echo json_encode(['error' => 'Perangkat tidak valid']);
-    }
-}
-
-function handleClearChat() {
-    $device = $_GET['device'] ?? '';
-    
-    if ($device === '1') {
-        $_SESSION['perangkat1'] = [];
-        echo json_encode(['success' => true]);
-    } 
-    elseif ($device === '2') {
-        $_SESSION['perangkat2'] = [];
-        echo json_encode(['success' => true]);
     }
     else {
         echo json_encode(['error' => 'Perangkat tidak valid']);
