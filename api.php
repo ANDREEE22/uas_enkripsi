@@ -1,7 +1,20 @@
 <?php
-session_start();
-header('Content-Type: application/json');
+// Tambahkan error reporting di awal
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
+// Mulai session dengan pengaturan yang lebih kompatibel
+session_start([
+    'cookie_lifetime' => 86400,
+    'read_and_close'  => false,
+    'use_strict_mode' => true
+]);
+header('Content-Type: application/json');
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST");
+header("Access-Control-Allow-Headers: Content-Type");
+
+// Inisialisasi session jika belum ada
 if (!isset($_SESSION['perangkat1'])) {
     $_SESSION['perangkat1'] = [];
     $_SESSION['perangkat2'] = [];
@@ -15,6 +28,9 @@ switch ($action) {
         break;
     case 'get':
         handleGetMessages();
+        break;
+    case 'clear':
+        handleClearChat();
         break;
     default:
         echo json_encode(['error' => 'Aksi tidak valid']);
@@ -117,5 +133,18 @@ function handleGetMessages() {
     else {
         echo json_encode(['error' => 'Perangkat tidak valid']);
     }
+}
+
+function handleClearChat() {
+    $device = $_GET['device'] ?? '';
+    
+    if ($device === '1') {
+        $_SESSION['perangkat1'] = [];
+    } 
+    elseif ($device === '2') {
+        $_SESSION['perangkat2'] = [];
+    }
+    
+    echo json_encode(['success' => true]);
 }
 ?>
