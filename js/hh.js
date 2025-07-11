@@ -33,8 +33,8 @@ document.getElementById('messageForm').addEventListener('submit', function(e) {
     
     if (messageInput.value.trim() === '') return;
     
-    // Kirim data ke server dengan path absolut
-    fetch(window.location.pathname.replace('perangkat1.php', '') + 'api.php?action=send', {
+    // Kirim data ke server
+    fetch('api.php?action=send', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -48,8 +48,7 @@ document.getElementById('messageForm').addEventListener('submit', function(e) {
             addMessageToChat(data.message, 'sent');
             messageInput.value = '';
         }
-    })
-    .catch(error => console.error('Error:', error));
+    });
 });
         
 // Fungsi untuk menambahkan pesan ke tampilan
@@ -72,7 +71,7 @@ function addMessageToChat(message, type) {
         
 // Fungsi untuk memeriksa pesan baru
 function checkForNewMessages() {
-    fetch(window.location.pathname.replace('perangkat1.php', '') + 'api.php?action=get&device=1')
+    fetch('api.php?action=get&device=1')
         .then(response => response.json())
         .then(data => {
             if (data.messages && data.messages.length > 0) {
@@ -97,8 +96,7 @@ function checkForNewMessages() {
                 
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             }
-        })
-        .catch(error => console.error('Error:', error));
+        });
 }
         
 // Fungsi untuk menghapus riwayat chat
@@ -108,14 +106,13 @@ document.getElementById('clearChat').addEventListener('click', function(e) {
     menuBackdrop.classList.remove('show');
     
     if (confirm('Apakah Anda yakin ingin menghapus semua riwayat pesan?')) {
-        fetch(window.location.pathname.replace('perangkat1.php', '') + 'api.php?action=clear&device=1')
+        fetch('api.php?action=clear&device=1')
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     document.getElementById('chatContainer').innerHTML = '';
                 }
-            })
-            .catch(error => console.error('Error:', error));
+            });
     }
 });
         
